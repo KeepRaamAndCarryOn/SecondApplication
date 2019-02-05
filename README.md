@@ -10,3 +10,8 @@ Use constraint layout as the views can be arranged relative to each other.
 
 ### ArrayMap
 Define the array map with data types of the Key and Value. "int" is a primitive type, is not allowed. Use "Integer" instead.
+
+### Logging
+use Log.d, first param use a const string as a Tag, then build the debug string for the second param
+* private static final String TAG = "MyApp";
+* Log.d(TAG, "some string");

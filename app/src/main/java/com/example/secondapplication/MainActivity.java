@@ -1,9 +1,11 @@
 package com.example.secondapplication;
 
+import android.graphics.Typeface;
 import android.support.v4.math.MathUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.ArrayMap;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -19,8 +21,10 @@ public class MainActivity extends AppCompatActivity {
     TextView eqTextView;
     TextView eqTopView;
 
-    LinearLayout paidColumn;
+    TextView selectedView;
 
+    LinearLayout paidColumn;
+    int selectedEntryint;
 
     String bottom_str;
     String top_str;
@@ -37,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     ArrayMap<Integer, Op> op_table;
-
+    private static final String TAG = "MyApp";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +67,10 @@ public class MainActivity extends AppCompatActivity {
         RHS = 0.0;
 
         op = Op.ADD;
+
+        selectedView = null;
+        selectedEntryint = -1;
+
     }
 
 
@@ -76,16 +84,15 @@ public class MainActivity extends AppCompatActivity {
     public void operatorClick(View view) {
         operatorButton = (Button) view;
 
-
+        //compute based on previously pressed operation
         compute();
 
-
         top_str = String.valueOf(LHS);
-
         RHS = 0.0;
         rhs_str = "";
         bottom_str = operatorButton.getText().toString();
 
+        //Store the newly pressed operation
         op = op_table.get(view.getId());
         updateDisplay();
     }
@@ -116,6 +123,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void equalClick(View view) {
 
+        //compute based on previously pressed operation
         compute();
         top_str = String.valueOf(LHS);
 
@@ -126,10 +134,23 @@ public class MainActivity extends AppCompatActivity {
         updateDisplay();
     }
 
-    View.OnClickListener entyrClickListener = new View.OnClickListener() {
+    View.OnClickListener entryClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
 
+
+            //If there is a previously selected view, clear selection
+            if (selectedEntryint >= 0){
+                Log.d(TAG, "entryonClick: More than zero, " + selectedEntryint);
+                selectedView = (TextView) (paidColumn.getChildAt(selectedEntryint));
+                selectedView.setTypeface(null,Typeface.NORMAL);
+            }
+
+            //Select new view
+            selectedView = (TextView) v;
+            selectedView.setTypeface(selectedView.getTypeface(),Typeface.BOLD);
+            selectedEntryint = paidColumn.indexOfChild(v);
+            Log.d(TAG, "entryonClick: selectedEntryint " + selectedEntryint);
         }
     };
 
@@ -137,6 +158,14 @@ public class MainActivity extends AppCompatActivity {
         Double amount;
     }
 
+    public void TestClick(View v){
+        /*selectedView.setTypeface(selectedView.getTypeface(),Typeface.NORMAL);
+        TextView test;
+        if (selectedEntryint >= 0){
+            test = (TextView) paidColumn.getChildAt(selectedEntryint);
+            test.setTypeface(selectedView.getTypeface(),Typeface.ITALIC);
+        }*/
+    }
     public void PaidClick(View view) {
         if (top_str.equals(""))
             return;
@@ -169,8 +198,9 @@ public class MainActivity extends AppCompatActivity {
                 LinearLayout.LayoutParams.WRAP_CONTENT));  //height
 
         ret.setClickable(true);
-        ret.setOnClickListener(entyrClickListener);
+        ret.setOnClickListener(entryClickListener);
         ret.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        ret.setTextSize(16);
         ret.setText(s);
 
         return ret;
