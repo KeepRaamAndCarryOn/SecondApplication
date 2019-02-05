@@ -14,5 +14,7 @@
     <string name="op_minus">-</string>
     <string name="op_equal">=</string>
     <string name="op_multi">x</string>
+    <string name="act_paid">paid</string>
+    <string name="act_spent">spent</string>
 
 </resources>
