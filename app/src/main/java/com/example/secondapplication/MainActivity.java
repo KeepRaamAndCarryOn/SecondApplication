@@ -1,7 +1,7 @@
 package com.example.secondapplication;
 
+import android.graphics.Color;
 import android.graphics.Typeface;
-import android.support.v4.math.MathUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.ArrayMap;
@@ -9,9 +9,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
-
-import org.w3c.dom.Text;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -22,9 +21,13 @@ public class MainActivity extends AppCompatActivity {
     TextView eqTopView;
 
     TextView selectedView;
+    int selectedEntryint;
+    Entry selectedEntry;
 
     LinearLayout paidColumn;
-    int selectedEntryint;
+    ScrollView paidScroll;
+
+
 
     String bottom_str;
     String top_str;
@@ -33,14 +36,27 @@ public class MainActivity extends AppCompatActivity {
     Double LHS;
     Double RHS;
 
+
+
     Op op;
 
     enum Op {
         NONE, ADD, MINUS, MULTIPLY, DIVIDE, EQUALS
     }
 
+    enum Act{
+        PAID, SPENT
+    }
+
+    public class Entry {
+        Double amount;
+        Act act;
+    }
+
+    ArrayMap<Integer, Entry> paidSpentMap;
 
     ArrayMap<Integer, Op> op_table;
+    ArrayMap<Integer, Act> act_table;
     private static final String TAG = "MyApp";
 
     @Override
@@ -52,12 +68,18 @@ public class MainActivity extends AppCompatActivity {
         eqTopView = (TextView) findViewById(R.id.eqTop);
 
         paidColumn = findViewById(R.id.paidLinearLayout);
+        paidScroll = findViewById(R.id.paidColumnView);
 
         op_table = new ArrayMap<>();
         op_table.put(R.id.buttonPlus, Op.ADD);
         op_table.put(R.id.buttonMinus, Op.MINUS);
-        op_table.put(R.id.buttonEquals, Op.EQUALS);
+        op_table.put(R.id.buttonEqual, Op.EQUALS);
         op_table.put(R.id.buttonMulti, Op.MULTIPLY);
+        op_table.put(R.id.buttonDivide, Op.DIVIDE);
+
+        act_table = new ArrayMap<>();
+        act_table.put(R.id.paidButtonView, Act.PAID);
+        act_table.put(R.id.spentButtonView, Act.SPENT);
 
         bottom_str = "";
         top_str = "";
@@ -66,17 +88,30 @@ public class MainActivity extends AppCompatActivity {
         LHS = 0.0;
         RHS = 0.0;
 
-        op = Op.ADD;
+        op = Op.NONE;
 
         selectedView = null;
         selectedEntryint = -1;
+        selectedEntry = null;
+
+        paidSpentMap = new ArrayMap<>();
+        paidSpentMap.clear();
 
     }
 
 
     public void numericClick(View view) {
         numericButton = (Button) view;
-        bottom_str += numericButton.getText().toString();
+        if (op.equals(Op.NONE)){
+            if(rhs_str.equals("")){
+                top_str = "";
+            }
+            top_str += numericButton.getText().toString();
+        }
+        else{
+            bottom_str += numericButton.getText().toString();
+        }
+
         rhs_str += numericButton.getText().toString();
         updateDisplay();
     }
@@ -97,11 +132,16 @@ public class MainActivity extends AppCompatActivity {
         updateDisplay();
     }
 
-    public void compute() {
-        if (top_str.equals("")) {
-            LHS = 0.0;
+    public void clearClick(View v){
+        if (selectedEntry != null){
+            paidSpentMap.remove(selectedEntry);
+            paidColumn.removeViewAt(selectedEntryint);
+            selectedEntry = null;
+            selectedEntryint = -1;
         }
-
+        clearDisplay();
+    }
+    public void compute() {
         if (rhs_str.equals("")) {
             RHS = 0.0;
         } else {
@@ -110,9 +150,25 @@ public class MainActivity extends AppCompatActivity {
 
         if (op != null) {
             switch (op) {
+                case NONE:
                 case ADD:
                     LHS = LHS + RHS;
                     break;
+
+                case DIVIDE:
+                    if(RHS<=0.0) {
+                        LHS = 0.0;
+                    }
+                    else {
+                        LHS = LHS / RHS;
+                    }
+                    break;
+
+                case MINUS:
+                    LHS = LHS - RHS;
+                    if (LHS<0){
+                        LHS = 0.0;
+                    }
 
                 case MULTIPLY:
                     LHS = (LHS.doubleValue() * RHS.doubleValue());
@@ -130,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
         RHS = 0.0;
         rhs_str = "";
         bottom_str = "";
-        op = Op.ADD;
+        op = Op.NONE;
         updateDisplay();
     }
 
@@ -146,17 +202,34 @@ public class MainActivity extends AppCompatActivity {
                 selectedView.setTypeface(null,Typeface.NORMAL);
             }
 
-            //Select new view
-            selectedView = (TextView) v;
-            selectedView.setTypeface(selectedView.getTypeface(),Typeface.BOLD);
-            selectedEntryint = paidColumn.indexOfChild(v);
-            Log.d(TAG, "entryonClick: selectedEntryint " + selectedEntryint);
+            //If same entry clicked, deselect
+            if(selectedEntryint == paidColumn.indexOfChild(v))
+            {
+                selectedEntry = null;
+                selectedView = null;
+                selectedEntryint = -1;
+                clearDisplay();
+            }
+            //Select new entry
+            else {
+                selectedView = (TextView) v;
+                selectedView.setTypeface(selectedView.getTypeface(), Typeface.BOLD);
+                selectedEntryint = paidColumn.indexOfChild(v);
+                Log.d(TAG, "entryonClick: selectedEntryint " + selectedEntryint);
+
+                selectedEntry = paidSpentMap.get(selectedEntryint);
+
+                //Load Entry onto display
+                clearDisplay();
+                RHS = selectedEntry.amount;
+                top_str = RHS.toString();
+                rhs_str = RHS.toString();
+                updateDisplay();
+            }
         }
     };
 
-    public class Entry {
-        Double amount;
-    }
+
 
     public void TestClick(View v){
         /*selectedView.setTypeface(selectedView.getTypeface(),Typeface.NORMAL);
@@ -166,19 +239,39 @@ public class MainActivity extends AppCompatActivity {
             test.setTypeface(selectedView.getTypeface(),Typeface.ITALIC);
         }*/
     }
-    public void PaidClick(View view) {
+    public void PaidSpentClick(View view) {
         if (top_str.equals(""))
             return;
 
-        Entry newEntry = new Entry();
-        newEntry.amount = LHS;
+        Act act = act_table.get(view.getId());
 
-        TextView newEntryView = createEntryView(newEntry.amount.toString());
-        paidColumn.addView(newEntryView);
+        compute();
+
+        if(selectedEntry == null) {
+            Entry newEntry = new Entry();
+            newEntry.amount = LHS;
+            newEntry.act = act;
+
+
+            TextView newEntryView = createEntryView(newEntry.amount.toString(), act);
+            paidColumn.addView(newEntryView);
+
+            paidSpentMap.put(paidColumn.indexOfChild(newEntryView), newEntry);
+            paidScroll.fullScroll(View.FOCUS_DOWN);
+        }
+        else
+        {
+            selectedEntry.amount = LHS;
+            updateEntryView(selectedEntry.amount.toString(),act);
+        }
         clearDisplay();
+
+
+
+        selectedEntry = null;
     }
 
-    public TextView createEntryView(String s) {
+    public TextView createEntryView(String s, Act a) {
         TextView ret;
         ret = new TextView(this);
 
@@ -187,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:clickable="true"
-        android:onClick="PaidClick"
+        android:onClick="PaidSpentClick"
         android:text="TextView"
         android:textAlignment="center"
         tools:layout_editor_absoluteX="16dp"
@@ -201,9 +294,37 @@ public class MainActivity extends AppCompatActivity {
         ret.setOnClickListener(entryClickListener);
         ret.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
         ret.setTextSize(16);
-        ret.setText(s);
+
+        switch (a){
+            case PAID:
+                ret.setText(String.format("+%s",s));
+                ret.setTextColor(Color.BLUE);
+                break;
+            case SPENT:
+                ret.setText(String.format("-%s",s));
+                ret.setTextColor(Color.RED);
+                break;
+        }
+        //ret.setText(s);
 
         return ret;
+    }
+
+    public void updateEntryView(String s, Act a) {
+
+        TextView ret = (TextView) paidColumn.getChildAt(selectedEntryint);
+
+        switch (a){
+            case PAID:
+                ret.setText(String.format("+%s",s));
+                ret.setTextColor(Color.BLUE);
+                break;
+            case SPENT:
+                ret.setText(String.format("-%s",s));
+                ret.setTextColor(Color.RED);
+                break;
+        }
+        ret.setTypeface(null,Typeface.NORMAL);
     }
 
     public void clearDisplay() {
@@ -212,7 +333,7 @@ public class MainActivity extends AppCompatActivity {
         top_str = "";
         bottom_str = "";
         rhs_str = "";
-        op = Op.ADD;
+        op = Op.NONE;
         updateDisplay();
     }
 
