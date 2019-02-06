@@ -14,49 +14,53 @@ import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
 
+    //Calculator Buttons
     Button numericButton;
     Button operatorButton;
 
-    TextView eqTextView;
-    TextView eqTopView;
+    //Calculator display
+    TextView eqTextView;   //bottom line
+    TextView eqTopView;    //top line
 
-    TextView selectedView;
-    int selectedEntryint;
-    Entry selectedEntry;
-
-    LinearLayout paidColumn;
-    ScrollView paidScroll;
-
-
-
+    //Calculator display strings
     String bottom_str;
     String top_str;
-    String rhs_str;
 
+    String rhs_str;  //buffer string to capture RHS (without operator)
+
+    //Numeric values for calculator
     Double LHS;
     Double RHS;
 
-
-
-    Op op;
-
-    enum Op {
+    //Operations
+    enum Op {  //enum of operations
         NONE, ADD, MINUS, MULTIPLY, DIVIDE, EQUALS
     }
 
-    enum Act{
-        PAID, SPENT
-    }
+    Op op;  //Holds the operation to perform upon next operator click or equals click
+    ArrayMap<Integer, Op> op_table;  //Maps button id to operation
 
+    //PaidSpent List views
+    LinearLayout paidColumn;
+    ScrollView paidScroll;
+
+    //Entry selection
     public class Entry {
         Double amount;
         Act act;
     }
+    TextView selectedView;   //Variable to hold clicked view (only valid in onClick method)
+    int selectedEntryint;    //Index of Selected view
+    Entry selectedEntry;     //Selected Entry
 
-    ArrayMap<Integer, Entry> paidSpentMap;
+    //Handling entries
+    enum Act {
+        PAID, SPENT
+    }
+    ArrayMap<Integer, Act> act_table; //Maps button id to Paid/Spent action
+    ArrayMap<Integer, Entry> paidSpentMap;  //Holds the list of entry based on index of view in PaidColumn
 
-    ArrayMap<Integer, Op> op_table;
-    ArrayMap<Integer, Act> act_table;
+    //Log
     private static final String TAG = "MyApp";
 
     @Override
@@ -102,17 +106,18 @@ public class MainActivity extends AppCompatActivity {
 
     public void numericClick(View view) {
         numericButton = (Button) view;
-        if (op.equals(Op.NONE)){
-            if(rhs_str.equals("")){
-                top_str = "";
+
+        if (op.equals(Op.NONE)) {   //No Operation is selected yet
+            if (rhs_str.equals("")) {  //No numbers pressed yet (fresh)
+                top_str = "";          //When holding the value from old entry, overwrite
+                LHS = 0.0;
             }
-            top_str += numericButton.getText().toString();
-        }
-        else{
-            bottom_str += numericButton.getText().toString();
+            top_str += numericButton.getText().toString();  //Continue adding digits
+        } else {
+            bottom_str += numericButton.getText().toString();  //add digits to bottom
         }
 
-        rhs_str += numericButton.getText().toString();
+        rhs_str += numericButton.getText().toString();  //add digits for calculation (ignore operators)
         updateDisplay();
     }
 
@@ -132,8 +137,8 @@ public class MainActivity extends AppCompatActivity {
         updateDisplay();
     }
 
-    public void clearClick(View v){
-        if (selectedEntry != null){
+    public void clearClick(View v) {
+        if (selectedEntry != null) {
             paidSpentMap.remove(selectedEntry);
             paidColumn.removeViewAt(selectedEntryint);
             selectedEntry = null;
@@ -141,6 +146,7 @@ public class MainActivity extends AppCompatActivity {
         }
         clearDisplay();
     }
+
     public void compute() {
         if (rhs_str.equals("")) {
             RHS = 0.0;
@@ -156,19 +162,19 @@ public class MainActivity extends AppCompatActivity {
                     break;
 
                 case DIVIDE:
-                    if(RHS<=0.0) {
+                    if (RHS <= 0.0) {
                         LHS = 0.0;
-                    }
-                    else {
+                    } else {
                         LHS = LHS / RHS;
                     }
                     break;
 
                 case MINUS:
                     LHS = LHS - RHS;
-                    if (LHS<0){
+                    if (LHS < 0) {
                         LHS = 0.0;
                     }
+                    break;
 
                 case MULTIPLY:
                     LHS = (LHS.doubleValue() * RHS.doubleValue());
@@ -194,24 +200,21 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onClick(View v) {
 
-
             //If there is a previously selected view, clear selection
-            if (selectedEntryint >= 0){
+            /*if (selectedEntryint >= 0) {
                 Log.d(TAG, "entryonClick: More than zero, " + selectedEntryint);
                 selectedView = (TextView) (paidColumn.getChildAt(selectedEntryint));
-                selectedView.setTypeface(null,Typeface.NORMAL);
+                selectedView.setTypeface(null, Typeface.NORMAL);
             }
-
+            */
             //If same entry clicked, deselect
-            if(selectedEntryint == paidColumn.indexOfChild(v))
-            {
-                selectedEntry = null;
-                selectedView = null;
-                selectedEntryint = -1;
+            if (selectedEntryint == paidColumn.indexOfChild(v)) {
+                clearEntrySelection();
                 clearDisplay();
-            }
-            //Select new entry
+            }//Select new entry
             else {
+                clearEntrySelection();
+                clearDisplay();
                 selectedView = (TextView) v;
                 selectedView.setTypeface(selectedView.getTypeface(), Typeface.BOLD);
                 selectedEntryint = paidColumn.indexOfChild(v);
@@ -220,7 +223,6 @@ public class MainActivity extends AppCompatActivity {
                 selectedEntry = paidSpentMap.get(selectedEntryint);
 
                 //Load Entry onto display
-                clearDisplay();
                 RHS = selectedEntry.amount;
                 top_str = RHS.toString();
                 rhs_str = RHS.toString();
@@ -229,16 +231,6 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-
-
-    public void TestClick(View v){
-        /*selectedView.setTypeface(selectedView.getTypeface(),Typeface.NORMAL);
-        TextView test;
-        if (selectedEntryint >= 0){
-            test = (TextView) paidColumn.getChildAt(selectedEntryint);
-            test.setTypeface(selectedView.getTypeface(),Typeface.ITALIC);
-        }*/
-    }
     public void PaidSpentClick(View view) {
         if (top_str.equals(""))
             return;
@@ -247,28 +239,33 @@ public class MainActivity extends AppCompatActivity {
 
         compute();
 
-        if(selectedEntry == null) {
+        if (selectedEntry == null) {  //If no entry in selection, create new entry
             Entry newEntry = new Entry();
             newEntry.amount = LHS;
             newEntry.act = act;
-
 
             TextView newEntryView = createEntryView(newEntry.amount.toString(), act);
             paidColumn.addView(newEntryView);
 
             paidSpentMap.put(paidColumn.indexOfChild(newEntryView), newEntry);
             paidScroll.fullScroll(View.FOCUS_DOWN);
-        }
-        else
-        {
+        } else {                     //If entry selected, overwrite entry
             selectedEntry.amount = LHS;
-            updateEntryView(selectedEntry.amount.toString(),act);
+            updateEntryView(selectedEntry.amount.toString(), act);
         }
         clearDisplay();
+        clearEntrySelection();
+    }
 
-
-
+    public void clearEntrySelection(){
+        if(selectedEntryint != -1) {
+            selectedView = (TextView) (paidColumn.getChildAt(selectedEntryint));
+            selectedView.setTypeface(null, Typeface.NORMAL);
+        }
         selectedEntry = null;
+        selectedView = null;
+        selectedEntryint = -1;
+
     }
 
     public TextView createEntryView(String s, Act a) {
@@ -295,13 +292,13 @@ public class MainActivity extends AppCompatActivity {
         ret.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
         ret.setTextSize(16);
 
-        switch (a){
+        switch (a) {
             case PAID:
-                ret.setText(String.format("+%s",s));
+                ret.setText(String.format("+%s", s));
                 ret.setTextColor(Color.BLUE);
                 break;
             case SPENT:
-                ret.setText(String.format("-%s",s));
+                ret.setText(String.format("-%s", s));
                 ret.setTextColor(Color.RED);
                 break;
         }
@@ -314,17 +311,17 @@ public class MainActivity extends AppCompatActivity {
 
         TextView ret = (TextView) paidColumn.getChildAt(selectedEntryint);
 
-        switch (a){
+        switch (a) {
             case PAID:
-                ret.setText(String.format("+%s",s));
+                ret.setText(String.format("+%s", s));
                 ret.setTextColor(Color.BLUE);
                 break;
             case SPENT:
-                ret.setText(String.format("-%s",s));
+                ret.setText(String.format("-%s", s));
                 ret.setTextColor(Color.RED);
                 break;
         }
-        ret.setTypeface(null,Typeface.NORMAL);
+        ret.setTypeface(null, Typeface.NORMAL);
     }
 
     public void clearDisplay() {
@@ -340,8 +337,5 @@ public class MainActivity extends AppCompatActivity {
     public void updateDisplay() {
         eqTopView.setText(top_str);
         eqTextView.setText(bottom_str);
-
     }
-
-
 }
