@@ -6,7 +6,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
@@ -23,6 +22,7 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.DoubleUnaryOperator;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -70,20 +70,32 @@ public class MainActivity extends AppCompatActivity {
         PAID, SPENT
     }
     ArrayMap<Integer, Act> act_table; //Maps button id to Paid/Spent action
-    ArrayMap<Integer, Entry> paidSpentMap;  //Holds the list of entry based on index of view in PaidColumn
+
+    ArrayList<Entry> paidSpentMap;  //Holds the list of entry based on index of view in PaidColumn
 
     //Person
     public class Person {
-        ArrayMap<Integer, Entry> personPaidMap;
+        ArrayList<Entry> personPaidMap;
+        int size;
+        Double net;
+        Person(){
+            personPaidMap = new ArrayList<>();
+            personPaidMap.clear();
+            size = 0;
+            net = 0.0;
+        }
     }
+    ArrayList<Person> personsArrayList;
+    Person selectedPerson;
 
     public class PersonFragmentBundle {
         Fragment f;
         Bundle b;
-
+        //Person p;
         PersonFragmentBundle(){
             f = new PersonSlideFragment();
             b = new Bundle();
+            //p = new Person();
         }
     }
 
@@ -129,17 +141,19 @@ public class MainActivity extends AppCompatActivity {
         selectedEntryint = -1;
         selectedEntry = null;
 
-        paidSpentMap = new ArrayMap<>();
-        paidSpentMap.clear();
+        personsArrayList = new ArrayList<>();
+        selectedPerson = null;
 
         mPager = findViewById(R.id.viewPager);
         mPagerAdaptor = new PersonPagerAdapter(getSupportFragmentManager());
         mPager.setAdapter(mPagerAdaptor);
         mPager.addOnPageChangeListener(new PersonChangeListener());
-
         count = 0;
 
         addPersonClick(null);
+        selectedPerson = personsArrayList.get(mPager.getCurrentItem());
+        paidSpentMap = selectedPerson.personPaidMap;
+
 
     }
 
@@ -216,6 +230,8 @@ public class MainActivity extends AppCompatActivity {
     public void addPersonClick (View v)
     {
         Log.d(TAG,"ADD PERSON CLICKED");
+
+        personsArrayList.add(new Person());
         PersonFragmentBundle pfb = new PersonFragmentBundle();
         count++;
         pfb.b.putString("name","Person " + count);
@@ -223,7 +239,6 @@ public class MainActivity extends AppCompatActivity {
         //mPagerAdaptor.notifyDataSetChanged();
         mPager.setAdapter(mPagerAdaptor);
         mPager.setCurrentItem(mPagerAdaptor.mFragmentBundleList.size()-1,true);
-
     }
 
     public class PersonChangeListener extends ViewPager.SimpleOnPageChangeListener{
@@ -239,6 +254,21 @@ public class MainActivity extends AppCompatActivity {
         public void onPageSelected(int i) {
             super.onPageSelected(i);
             Log.d(TAG, "onPageSelected: " + i);
+
+            if(i >= personsArrayList.size()){//Last "Add Person" page
+                clearEntrySelection();
+                clearDisplay();
+                paidSpentMap = null;
+                selectedPerson = null;
+                paidColumn.removeAllViews();
+            }
+            else {
+                clearEntrySelection();
+                clearDisplay();
+                selectedPerson = personsArrayList.get(i);
+                paidSpentMap = selectedPerson.personPaidMap;
+                loadPaidColumn();
+            }
 
         }
 
@@ -287,11 +317,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void clearClick(View v) {
-        if (selectedEntry != null) {
-            paidSpentMap.remove(selectedEntry);
-            paidColumn.removeViewAt(selectedEntryint);
-            selectedEntry = null;
-            selectedEntryint = -1;
+        if(selectedPerson != null) {
+            if (selectedEntry != null) {
+                paidSpentMap.remove(selectedEntry);
+                paidColumn.removeViewAt(selectedEntryint);
+                selectedEntry = null;
+                selectedEntryint = -1;
+            }
         }
         clearDisplay();
     }
@@ -373,16 +405,27 @@ public class MainActivity extends AppCompatActivity {
 
                 selectedEntry = paidSpentMap.get(selectedEntryint);
 
+
                 //Load Entry onto display
-                RHS = selectedEntry.amount;
+                /*RHS = selectedEntry.amount;
                 top_str = RHS.toString();
                 rhs_str = RHS.toString();
+                updateDisplay();*/
+                LHS = selectedEntry.amount;
+                top_str = String.valueOf(LHS);
+                RHS = 0.0;
+                rhs_str = "";
+                bottom_str = "";
+                op = Op.NONE;
                 updateDisplay();
             }
         }
     };
 
     public void PaidSpentClick(View view) {
+        if(selectedPerson == null)
+            return;
+
         if (top_str.equals(""))
             return;
 
@@ -397,8 +440,8 @@ public class MainActivity extends AppCompatActivity {
 
             TextView newEntryView = createEntryView(newEntry.amount.toString(), act);
             paidColumn.addView(newEntryView);
-
-            paidSpentMap.put(paidColumn.indexOfChild(newEntryView), newEntry);
+            paidSpentMap.add(paidColumn.indexOfChild(newEntryView), newEntry);
+            selectedPerson.size = paidSpentMap.size();
             paidScroll.fullScroll(View.FOCUS_DOWN);
         } else {                     //If entry selected, overwrite entry
             selectedEntry.amount = LHS;
@@ -406,6 +449,10 @@ public class MainActivity extends AppCompatActivity {
         }
         clearDisplay();
         clearEntrySelection();
+
+        selectedPerson.net = computeNet();
+        TextView net = mPagerAdaptor.getItem(mPager.getCurrentItem()).getView().findViewById(R.id.personAmount);
+        net.setText(selectedPerson.net.toString());
     }
 
     public void clearEntrySelection(){
@@ -490,6 +537,56 @@ public class MainActivity extends AppCompatActivity {
         eqTextView.setText(bottom_str);
     }
 
+    public void loadPaidColumn(){
+        paidColumn.removeAllViews();
+        for(Entry e: paidSpentMap){
+            TextView newEntryView = createEntryView(e.amount.toString(), e.act);
+            paidColumn.addView(newEntryView);
+        }
 
+        Log.d(TAG+1,"LoadPaidColumn " + "getCurrentItem:" + mPager.getCurrentItem());
+
+        try {
+            View v = mPagerAdaptor.getItem(mPager.getCurrentItem()).getView();
+            Log.d(TAG+1, "LoadPaidColumn " + "getView success");
+            if(v == null){
+                Log.d(TAG+1, "LoadPaidColumn " + "view is null");
+            }
+        }
+        catch(Exception e){
+            Log.d(TAG+1,"LoadPaidColumn " + "failed to getView");
+        }
+
+        try {
+            Log.d(TAG+1, "LoadPaidColumn " + "view:" + mPagerAdaptor.getItem(mPager.getCurrentItem()).getView().getId());
+        }
+        catch(Exception e){
+            Log.d(TAG+1,"LoadPaidColumn " + "failed to get view getId");
+        }
+        try {
+
+            TextView net = mPagerAdaptor.getItem(mPager.getCurrentItem()).getView().findViewById(R.id.personAmount);
+            net.setText(selectedPerson.net.toString());
+            Log.d(TAG+1,"LoadPaidColumn " + "netText:" + net.getText().toString());
+
+        }
+        catch(Exception e){
+            Log.d(TAG+1,"LoadPaidColumn " + "failed to get view findViewById");
+        }
+
+
+    }
+
+    public Double computeNet(){
+        Double net = 0.0;
+        for(Entry e: paidSpentMap){
+                if(e.act == Act.PAID)                {
+                    net += e.amount;
+                }else{
+                    net -= e.amount;
+                }
+            }
+        return net;
+    }
 
 }
