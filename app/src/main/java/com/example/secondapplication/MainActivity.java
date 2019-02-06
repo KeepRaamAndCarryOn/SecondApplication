@@ -77,21 +77,12 @@ public class MainActivity extends AppCompatActivity {
         ArrayMap<Integer, Entry> personPaidMap;
     }
 
-    enum PersonFragmentType {
-        ADDPERSON, PERSON
-    }
     public class PersonFragmentBundle {
         Fragment f;
         Bundle b;
 
-        PersonFragmentBundle(PersonFragmentType type){
-            if (type == PersonFragmentType.ADDPERSON){
-                f = new AddNewPersonSlideFragment();
-            }
-            else{
-                f = new PersonSlideFragment();
-            }
-
+        PersonFragmentBundle(){
+            f = new PersonSlideFragment();
             b = new Bundle();
         }
     }
@@ -108,8 +99,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        eqTextView = (TextView) findViewById(R.id.eqTextBox);
-        eqTopView = (TextView) findViewById(R.id.eqTop);
+        eqTextView = findViewById(R.id.eqTextBox);
+        eqTopView = findViewById(R.id.eqTop);
 
         paidColumn = findViewById(R.id.paidLinearLayout);
         paidScroll = findViewById(R.id.paidColumnView);
@@ -225,7 +216,7 @@ public class MainActivity extends AppCompatActivity {
     public void addPersonClick (View v)
     {
         Log.d(TAG,"ADD PERSON CLICKED");
-        PersonFragmentBundle pfb = new PersonFragmentBundle(PersonFragmentType.PERSON);
+        PersonFragmentBundle pfb = new PersonFragmentBundle();
         count++;
         pfb.b.putString("name","Person " + count);
         mPagerAdaptor.addPersonFragmentBundle(pfb);
