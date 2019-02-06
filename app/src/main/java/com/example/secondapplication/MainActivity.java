@@ -148,15 +148,13 @@ public class MainActivity extends AppCompatActivity {
 
         count = 0;
 
-        mPagerAdaptor.addAddPersonFragmentBundle(new PersonFragmentBundle(PersonFragmentType.ADDPERSON));
-        //
-        mPagerAdaptor.notifyDataSetChanged();
+        addPersonClick(null);
 
     }
 
-    private class PersonPagerAdapter extends FragmentPagerAdapter {
-        private final List<PersonFragmentBundle> mFragmentBundleList = new ArrayList<>();
-
+    public class PersonPagerAdapter extends FragmentStatePagerAdapter {
+        public final List<PersonFragmentBundle> mFragmentBundleList = new ArrayList<>();
+        public Fragment LastPageFragment;
         public PersonPagerAdapter(FragmentManager fm) {
             super(fm);
         }
@@ -164,6 +162,11 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public Fragment getItem(int position) {
             Log.d(TAG, "PersonPagerAdapter: getItem: "+position);
+            if(position == mFragmentBundleList.size())//Last
+            {
+                return LastPageFragment;
+            }
+
             PersonFragmentBundle item = mFragmentBundleList.get(position);
             item.f.setArguments(item.b);
             return item.f;
@@ -171,19 +174,22 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public int getCount() {
-            return mFragmentBundleList.size();
+            Log.d(TAG, "PersonPagerAdapter: getCount: "+mFragmentBundleList.size());
+            return mFragmentBundleList.size() + 1;
         }
+
 
 
         public void addPersonFragmentBundle(PersonFragmentBundle newPFB){
             Log.d(TAG,"addPersonFragmentBundle, mFragmentBundleList.size=" + mFragmentBundleList.size());
             mFragmentBundleList.add(newPFB);
+            LastPageFragment = new AddNewPersonSlideFragment();
         }
 
-        public void addAddPersonFragmentBundle(PersonFragmentBundle newPFB){
+        /*public void addAddPersonFragmentBundle(PersonFragmentBundle newPFB){
             Log.d(TAG,"addAddPersonFragmentBundle");
             mFragmentBundleList.add(newPFB);
-        }
+        }*/
 
     }
 
@@ -223,8 +229,9 @@ public class MainActivity extends AppCompatActivity {
         count++;
         pfb.b.putString("name","Person " + count);
         mPagerAdaptor.addPersonFragmentBundle(pfb);
-        mPagerAdaptor.notifyDataSetChanged();
-        //mPager.setCurrentItem(newItemIndex,true);
+        //mPagerAdaptor.notifyDataSetChanged();
+        mPager.setAdapter(mPagerAdaptor);
+        mPager.setCurrentItem(mPagerAdaptor.mFragmentBundleList.size()-1,true);
 
     }
 
