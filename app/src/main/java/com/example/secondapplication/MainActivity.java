@@ -5,10 +5,9 @@ import android.graphics.Typeface;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentStatePagerAdapter;
-import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -78,14 +77,29 @@ public class MainActivity extends AppCompatActivity {
         ArrayMap<Integer, Entry> personPaidMap;
     }
 
-    public class PersonFragement{
+    enum PersonFragmentType {
+        ADDPERSON, PERSON
+    }
+    public class PersonFragmentBundle {
         Fragment f;
         Bundle b;
+
+        PersonFragmentBundle(PersonFragmentType type){
+            if (type == PersonFragmentType.ADDPERSON){
+                f = new AddNewPersonSlideFragment();
+            }
+            else{
+                f = new PersonSlideFragment();
+            }
+
+            b = new Bundle();
+        }
     }
 
     ViewPager mPager;
     PersonPagerAdapter mPagerAdaptor;
 
+    int count;
     //Log
     private static final String TAG = "MyApp";
 
@@ -132,14 +146,16 @@ public class MainActivity extends AppCompatActivity {
         mPager.setAdapter(mPagerAdaptor);
         mPager.addOnPageChangeListener(new PersonChangeListener());
 
-        mPagerAdaptor.addAddNewPersonFragment(new AddNewPersonSlideFragment());
+        count = 0;
+
+        mPagerAdaptor.addAddPersonFragmentBundle(new PersonFragmentBundle(PersonFragmentType.ADDPERSON));
+        //
         mPagerAdaptor.notifyDataSetChanged();
 
     }
 
-    private class PersonPagerAdapter extends FragmentStatePagerAdapter {
-        private final List<Fragment> mFragmentList = new ArrayList<>();
-
+    private class PersonPagerAdapter extends FragmentPagerAdapter {
+        private final List<PersonFragmentBundle> mFragmentBundleList = new ArrayList<>();
 
         public PersonPagerAdapter(FragmentManager fm) {
             super(fm);
@@ -148,30 +164,25 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public Fragment getItem(int position) {
             Log.d(TAG, "PersonPagerAdapter: getItem: "+position);
-            return mFragmentList.get(position);
+            PersonFragmentBundle item = mFragmentBundleList.get(position);
+            item.f.setArguments(item.b);
+            return item.f;
         }
 
         @Override
         public int getCount() {
-            return mFragmentList.size();
+            return mFragmentBundleList.size();
         }
 
-        public int addPersonFragment(Fragment newPersonFragment){
-            Log.d(TAG,"addPersonFragment, mFragmentList.size=" + mFragmentList.size());
-            //mFragmentList.add(mFragmentList.size()-1, newPersonFragment);
-            mFragmentList.add(newPersonFragment);
 
-            //getSupportFragmentManager().beginTransaction().remove(mFragmentList.get(mFragmentList.size()-1)).commit();
-            //mFragmentList.remove(mFragmentList.size()-1);
-            //mFragmentList.add(0,newPersonFragment);
-            return  0;
-
+        public void addPersonFragmentBundle(PersonFragmentBundle newPFB){
+            Log.d(TAG,"addPersonFragmentBundle, mFragmentBundleList.size=" + mFragmentBundleList.size());
+            mFragmentBundleList.add(newPFB);
         }
 
-        public void addAddNewPersonFragment(Fragment newPersonFragment){
-            Log.d(TAG,"addAddNewPersonFragment");
-            mFragmentList.add(newPersonFragment);
-
+        public void addAddPersonFragmentBundle(PersonFragmentBundle newPFB){
+            Log.d(TAG,"addAddPersonFragmentBundle");
+            mFragmentBundleList.add(newPFB);
         }
 
     }
@@ -186,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
             ViewGroup rootView = (ViewGroup) inflater.inflate(R.layout.fragment_person_slide, container, false);
             Log.d(TAG,"OnCreateView PersonSlideFragment");
             nameView = rootView.findViewById(R.id.personName);
-            nameView.setText("Person");
+            nameView.setText(getArguments().getString("name"));
 
             amountView = rootView.findViewById(R.id.personAmount);
             amountView.setText("0.0");
@@ -208,7 +219,10 @@ public class MainActivity extends AppCompatActivity {
     public void addPersonClick (View v)
     {
         Log.d(TAG,"ADD PERSON CLICKED");
-        int newItemIndex =  mPagerAdaptor.addPersonFragment(new PersonSlideFragment());
+        PersonFragmentBundle pfb = new PersonFragmentBundle(PersonFragmentType.PERSON);
+        count++;
+        pfb.b.putString("name","Person " + count);
+        mPagerAdaptor.addPersonFragmentBundle(pfb);
         mPagerAdaptor.notifyDataSetChanged();
         //mPager.setCurrentItem(newItemIndex,true);
 
@@ -233,7 +247,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onPageScrollStateChanged(int i) {
             super.onPageScrollStateChanged(i);
-            Log.d(TAG, "onPageSelected: " + i);
+            Log.d(TAG, "onPageScrollStateChanged: " + i);
 
 
         }
@@ -331,6 +345,8 @@ public class MainActivity extends AppCompatActivity {
         bottom_str = "";
         op = Op.NONE;
         updateDisplay();
+
+        Log.d(TAG, "Current Item: " + mPager.getCurrentItem());
     }
 
     View.OnClickListener entryClickListener = new View.OnClickListener() {
