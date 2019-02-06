@@ -2,15 +2,28 @@ package com.example.secondapplication;
 
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.view.PagerAdapter;
+import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.ArrayMap;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -60,6 +73,19 @@ public class MainActivity extends AppCompatActivity {
     ArrayMap<Integer, Act> act_table; //Maps button id to Paid/Spent action
     ArrayMap<Integer, Entry> paidSpentMap;  //Holds the list of entry based on index of view in PaidColumn
 
+    //Person
+    public class Person {
+        ArrayMap<Integer, Entry> personPaidMap;
+    }
+
+    public class PersonFragement{
+        Fragment f;
+        Bundle b;
+    }
+
+    ViewPager mPager;
+    PersonPagerAdapter mPagerAdaptor;
+
     //Log
     private static final String TAG = "MyApp";
 
@@ -101,7 +127,118 @@ public class MainActivity extends AppCompatActivity {
         paidSpentMap = new ArrayMap<>();
         paidSpentMap.clear();
 
+        mPager = findViewById(R.id.viewPager);
+        mPagerAdaptor = new PersonPagerAdapter(getSupportFragmentManager());
+        mPager.setAdapter(mPagerAdaptor);
+        mPager.addOnPageChangeListener(new PersonChangeListener());
+
+        mPagerAdaptor.addAddNewPersonFragment(new AddNewPersonSlideFragment());
+        mPagerAdaptor.notifyDataSetChanged();
+
     }
+
+    private class PersonPagerAdapter extends FragmentStatePagerAdapter {
+        private final List<Fragment> mFragmentList = new ArrayList<>();
+
+
+        public PersonPagerAdapter(FragmentManager fm) {
+            super(fm);
+        }
+
+        @Override
+        public Fragment getItem(int position) {
+            Log.d(TAG, "PersonPagerAdapter: getItem: "+position);
+            return mFragmentList.get(position);
+        }
+
+        @Override
+        public int getCount() {
+            return mFragmentList.size();
+        }
+
+        public int addPersonFragment(Fragment newPersonFragment){
+            Log.d(TAG,"addPersonFragment, mFragmentList.size=" + mFragmentList.size());
+            //mFragmentList.add(mFragmentList.size()-1, newPersonFragment);
+            mFragmentList.add(newPersonFragment);
+
+            //getSupportFragmentManager().beginTransaction().remove(mFragmentList.get(mFragmentList.size()-1)).commit();
+            //mFragmentList.remove(mFragmentList.size()-1);
+            //mFragmentList.add(0,newPersonFragment);
+            return  0;
+
+        }
+
+        public void addAddNewPersonFragment(Fragment newPersonFragment){
+            Log.d(TAG,"addAddNewPersonFragment");
+            mFragmentList.add(newPersonFragment);
+
+        }
+
+    }
+
+    public static class PersonSlideFragment extends Fragment{
+        TextView nameView;
+        TextView amountView;
+        @Nullable
+        @Override
+        public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+
+            ViewGroup rootView = (ViewGroup) inflater.inflate(R.layout.fragment_person_slide, container, false);
+            Log.d(TAG,"OnCreateView PersonSlideFragment");
+            nameView = rootView.findViewById(R.id.personName);
+            nameView.setText("Person");
+
+            amountView = rootView.findViewById(R.id.personAmount);
+            amountView.setText("0.0");
+            return rootView;
+        }
+    }
+
+    public static class AddNewPersonSlideFragment extends Fragment{
+        @Nullable
+        @Override
+        public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+
+            ViewGroup rootView = (ViewGroup) inflater.inflate(R.layout.fragment_new_person_slide, container, false);
+            Log.d(TAG,"OnCreateView AddNewPersonSlideFragment");
+            return rootView;
+        }
+    }
+
+    public void addPersonClick (View v)
+    {
+        Log.d(TAG,"ADD PERSON CLICKED");
+        int newItemIndex =  mPagerAdaptor.addPersonFragment(new PersonSlideFragment());
+        mPagerAdaptor.notifyDataSetChanged();
+        //mPager.setCurrentItem(newItemIndex,true);
+
+    }
+
+    public class PersonChangeListener extends ViewPager.SimpleOnPageChangeListener{
+
+        @Override
+        public void onPageScrolled(int i, float v, int i1) {
+            super.onPageScrolled(i,v,i1);
+            Log.d(TAG, "onPageScrolled: i:" + i + " v:" + v + " i1:" + i1);
+
+        }
+
+        @Override
+        public void onPageSelected(int i) {
+            super.onPageSelected(i);
+            Log.d(TAG, "onPageSelected: " + i);
+
+        }
+
+        @Override
+        public void onPageScrollStateChanged(int i) {
+            super.onPageScrollStateChanged(i);
+            Log.d(TAG, "onPageSelected: " + i);
+
+
+        }
+    }
+
 
 
     public void numericClick(View view) {
@@ -338,4 +475,7 @@ public class MainActivity extends AppCompatActivity {
         eqTopView.setText(top_str);
         eqTextView.setText(bottom_str);
     }
+
+
+
 }

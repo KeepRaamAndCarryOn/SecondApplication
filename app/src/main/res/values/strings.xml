@@ -19,5 +19,6 @@
     <string name="clear">C</string>
     <string name="act_paid">paid</string>
     <string name="act_spent">spent</string>
+    <string name="add_person">Add Person</string>
 
 </resources>
