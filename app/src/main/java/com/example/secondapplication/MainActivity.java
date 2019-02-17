@@ -323,7 +323,12 @@ public class MainActivity extends AppCompatActivity {
                 paidColumn.removeViewAt(selectedEntryint);
                 selectedEntry = null;
                 selectedEntryint = -1;
+
+                selectedPerson.net = computeNet();
+                TextView net = mPagerAdaptor.getItem(mPager.getCurrentItem()).getView().findViewById(R.id.personAmount);
+                net.setText(selectedPerson.net.toString());
             }
+
         }
         clearDisplay();
     }
